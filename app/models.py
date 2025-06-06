@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, LargeBinary, Float, DateTime, Boolean, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
