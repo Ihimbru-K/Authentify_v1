@@ -1,2 +1,3 @@
-# import secrets
-# print(secrets.token_hex(32))
+from app.security import get_password_hash
+print(get_password_hash("password"))
+

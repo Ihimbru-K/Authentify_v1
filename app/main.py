@@ -138,11 +138,10 @@ async def create_session(session: ExamSessionCreate, admin=Depends(get_current_a
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
+   
 
 
-
-
-
+  
 # from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 # from fastapi.responses import StreamingResponse
 # from sqlalchemy.orm import Session
