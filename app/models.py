@@ -115,3 +115,8 @@ class ExamSessionCreate(BaseModel):
     course_id: int
     start_time: datetime
     end_time: datetime
+
+class AdminSignup(BaseModel):
+    username: str
+    password: str
+    department_id: int
