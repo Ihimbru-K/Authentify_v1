@@ -7,7 +7,7 @@ from app.models import AdminLogin, StudentCreate, EnrollmentStatusRequest, ExamS
 from app.security import verify_password, create_access_token, get_current_admin
 from app.csv_handler import generate_enrollment_list_csv, parse_course_list_csv
 
-app = FastAPI(title="Biometric Attendance System")
+app = FastAPI(title="Authentikate Biometric UBa Exam Attendance System")
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -92,7 +92,7 @@ async def download_enrollment_list(department_id: int, level_id: int, admin=Depe
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
+#
 
 
 # @app.get("/enrollment/list/{department_id}/{level_id}")
