@@ -81,6 +81,7 @@ class Attendance(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 class ErrorLog(Base):
+    #
     __tablename__ = "error_logs"
     id = Column(Integer, primary_key=True)
     session_id = Column(Integer, ForeignKey("exam_sessions.session_id"))
