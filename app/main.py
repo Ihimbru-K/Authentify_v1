@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
+import pytz
 from sqlalchemy.orm import Session
 from datetime import datetime
 import io
@@ -12,7 +13,7 @@ from app.csv_handler import generate_enrollment_list_csv, parse_course_list_csv
 
 logging.basicConfig(level=logging.DEBUG)
 
-app = FastAPI(title="Authentikate Biometric UBa Exam Attendance System")
+app = FastAPI(title="Authentikate UBa Biometric Exam Attendance System")
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -174,6 +175,7 @@ async def create_session(session: ExamSessionCreate, admin=Depends(get_current_a
         logging.error(f"Session error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.post("/attendance/authenticate")
 async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
     try:
@@ -184,9 +186,16 @@ async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_curre
         if session.admin_id != admin.admin_id:
             raise HTTPException(status_code=403, detail="Not authorized for this session")
 
-        # Check time window
-        now = datetime.utcnow()
-        if now < session.start_time or now > session.end_time:
+        # Check time window in WAT
+        wat_tz = pytz.timezone('Africa/Lagos')  # WAT (UTC+1)
+        now = datetime.now(wat_tz).replace(tzinfo=None)  # Make naive
+        logging.debug(f"Current WAT time: {now}, Session start: {session.start_time}, end: {session.end_time}")
+
+        # start_time and end_time are naive (from TIMESTAMP WITHOUT TIME ZONE)
+        start_time = session.start_time
+        end_time = session.end_time
+
+        if now < start_time or now > end_time:
             raise HTTPException(status_code=403, detail="Authentication outside session time window")
 
         # Match fingerprint
@@ -266,6 +275,100 @@ async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_curre
         db.rollback()
         logging.error(f"Authentication error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# @app.post("/attendance/authenticate")
+# async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+#     try:
+#         # Validate session
+#         session = db.query(ExamSession).filter(ExamSession.session_id == auth.session_id).first()
+#         if not session:
+#             raise HTTPException(status_code=404, detail="Session not found")
+#         if session.admin_id != admin.admin_id:
+#             raise HTTPException(status_code=403, detail="Not authorized for this session")
+
+#         # Check time window
+#         now = datetime.utcnow()
+#         if now < session.start_time or now > session.end_time:
+#             raise HTTPException(status_code=403, detail="Authentication outside session time window")
+
+#         # Match fingerprint
+#         student = db.query(Student).filter(Student.fingerprint_template == auth.fingerprint_template).first()
+#         if not student:
+#             error_log = ErrorLog(
+#                 session_id=auth.session_id,
+#                 matriculation_number=None,
+#                 error_type="AUTH_FAILED",
+#                 details="No student matched the provided fingerprint"
+#             )
+#             db.add(error_log)
+#             db.commit()
+#             logging.error(f"Fingerprint mismatch for session {auth.session_id}")
+#             raise HTTPException(status_code=404, detail="Student not found")
+
+#         # Check course enrollment
+#         course_list = db.query(CourseList).filter(
+#             CourseList.course_id == session.course_id,
+#             CourseList.matriculation_number == student.matriculation_number
+#         ).first()
+#         if not course_list:
+#             error_log = ErrorLog(
+#                 session_id=auth.session_id,
+#                 matriculation_number=student.matriculation_number,
+#                 error_type="NOT_ENROLLED",
+#                 details=f"Student not enrolled in course {session.course_id}"
+#             )
+#             db.add(error_log)
+#             db.commit()
+#             logging.error(f"Student {student.matriculation_number} not enrolled in course {session.course_id}")
+#             raise HTTPException(status_code=403, detail="Student not enrolled in this course")
+
+#         # Validate CA mark
+#         if course_list.ca_mark is None or course_list.ca_mark < 0:
+#             error_log = ErrorLog(
+#                 session_id=auth.session_id,
+#                 matriculation_number=student.matriculation_number,
+#                 error_type="INVALID_CA_MARK",
+#                 details=f"Invalid CA mark: {course_list.ca_mark}"
+#             )
+#             db.add(error_log)
+#             db.commit()
+#             logging.error(f"Invalid CA mark for {student.matriculation_number}: {course_list.ca_mark}")
+#             raise HTTPException(status_code=403, detail="Invalid CA mark")
+
+#         # Check if already authenticated
+#         existing_attendance = db.query(Attendance).filter(
+#             Attendance.session_id == auth.session_id,
+#             Attendance.matriculation_number == student.matriculation_number
+#         ).first()
+#         if existing_attendance and existing_attendance.authenticated:
+#             logging.debug(f"Student {student.matriculation_number} already authenticated for session {auth.session_id}")
+#             return {
+#                 "message": "Student already authenticated",
+#                 "matriculation_number": student.matriculation_number,
+#                 "name": student.name,
+#                 "ca_mark": course_list.ca_mark
+#             }
+
+#         # Record attendance
+#         attendance = Attendance(
+#             session_id=auth.session_id,
+#             matriculation_number=student.matriculation_number,
+#             authenticated=True
+#         )
+#         db.add(attendance)
+#         db.commit()
+#         logging.debug(f"Student {student.matriculation_number} authenticated for session {auth.session_id}")
+#         return {
+#             "message": "Student authenticated successfully",
+#             "matriculation_number": student.matriculation_number,
+#             "name": student.name,
+#             "ca_mark": course_list.ca_mark
+#         }
+#     except Exception as e:
+#         db.rollback()
+#         logging.error(f"Authentication error: {str(e)}")
+#         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/attendance/dispute")
 async def report_ca_mark_dispute(dispute: CAMarkDisputeRequest, db: Session = Depends(get_db)):
