@@ -6,6 +6,8 @@ from datetime import datetime
 import io
 import pandas as pd
 import logging
+
+import uvicorn
 from app.models import get_db, Admin, Student, Department, Level, Course, CourseList, ExamSession, Attendance, ErrorLog, Base, engine
 from app.models import AdminLogin, AdminSignup, StudentCreate, EnrollmentStatusRequest, ExamSessionCreate, StudentAuthRequest, CAMarkDisputeRequest, AttendanceReportRequest, ErrorReportRequest
 from app.security import verify_password, create_access_token, get_current_admin, get_password_hash
@@ -15,8 +17,14 @@ logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI(title="Authentikate UBa Biometric Exam Attendance System")
 
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 @app.post("/auth/signup")
 async def signup(admin: AdminSignup, db: Session = Depends(get_db)):
