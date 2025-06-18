@@ -1,5 +1,6 @@
 
 
+from typing import Optional
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -57,6 +58,7 @@ class Student(Base):
     name = Column(String, nullable=False)
     department_id = Column(Integer, ForeignKey("departments.department_id"))
     level_id = Column(Integer, ForeignKey("levels.level_id"))
+    photo = Column(String, nullable=True)
     fingerprint_template = Column(String, nullable=False)
 
 class CourseList(Base):
@@ -114,6 +116,7 @@ class StudentCreate(BaseModel):
     department_id: int
     level_id: int
     fingerprint_template: str
+    photo: Optional[str] = None
 
 class EnrollmentStatusRequest(BaseModel):
     fingerprint_template: str
