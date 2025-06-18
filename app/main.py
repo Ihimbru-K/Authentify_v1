@@ -48,6 +48,8 @@ async def signup(admin: AdminSignup, db: Session = Depends(get_db)):
         db.rollback()
         logging.error(f"Signup error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    
+
 
 @app.post("/auth/login")
 async def login(admin: AdminLogin, db: Session = Depends(get_db)):
@@ -56,7 +58,20 @@ async def login(admin: AdminLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": admin.username})
     logging.debug(f"Admin logged in: {admin.username}")
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "name": admin.username  
+    }
+
+# @app.post("/auth/login")
+# async def login(admin: AdminLogin, db: Session = Depends(get_db)):
+#     db_admin = db.query(Admin).filter(Admin.username == admin.username).first()
+#     if not db_admin or not verify_password(admin.password, db_admin.password_hash):
+#         raise HTTPException(status_code=401, detail="Invalid credentials")
+#     token = create_access_token({"sub": admin.username})
+#     logging.debug(f"Admin logged in: {admin.username}")
+#     return {"access_token": token, "token_type": "bearer"}
 
 @app.post("/enrollment/enroll")
 async def enroll_student(student: StudentCreate, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
