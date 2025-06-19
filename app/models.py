@@ -142,6 +142,14 @@ class AttendanceReportRequest(BaseModel):
 class ErrorReportRequest(BaseModel):
     session_id: int
 
+class EnrollmentRequest(BaseModel):
+    matriculation_number: str
+    name: str
+    department_id: int
+    level_id: int
+    fingerprint_template: str
+    photo: Optional[str] = None  # For base64 photo
+
 
 
 

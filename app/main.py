@@ -1,5 +1,5 @@
 import base64
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, Form, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 import pytz
 from sqlalchemy.orm import Session
@@ -13,6 +13,7 @@ from app.models import get_db, Admin, Student, Department, Level, Course, Course
 from app.models import AdminLogin, AdminSignup, StudentCreate, EnrollmentStatusRequest, ExamSessionCreate, StudentAuthRequest, CAMarkDisputeRequest, AttendanceReportRequest, ErrorReportRequest
 from app.security import verify_password, create_access_token, get_current_admin, get_password_hash
 from app.csv_handler import generate_enrollment_list_csv, parse_course_list_csv
+from app.models import EnrollmentRequest
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -59,47 +60,47 @@ async def login(admin: AdminLogin, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "name": admin.username  
     }
-@app.post("/enrollment/enroll")
-async def enroll_student(
-    matriculation_number: str,
-    name: str,
-    department_id: int,
-    level_id: int,
-    fingerprint_template: str,
-    photo: UploadFile = File(None),  # Optional photo file
-    admin=Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    try:
-        department = db.query(Department).filter(Department.department_id == department_id).first()
-        level = db.query(Level).filter(Level.level_id == level_id, Level.department_id == department_id).first()
-        if not department or not level:
-            raise HTTPException(status_code=400, detail="Invalid department or level")
-        if department.department_id != admin.department_id:
-            raise HTTPException(status_code=403, detail="Not authorized for this department")
+# @app.post("/enrollment/enroll")
+# async def enroll_student(
+#     matriculation_number: str,
+#     name: str,
+#     department_id: int,
+#     level_id: int,
+#     fingerprint_template: str,
+#     photo: UploadFile = File(None),  # Optional photo file
+#     admin=Depends(get_current_admin),
+#     db: Session = Depends(get_db)
+# ):
+#     try:
+#         department = db.query(Department).filter(Department.department_id == department_id).first()
+#         level = db.query(Level).filter(Level.level_id == level_id, Level.department_id == department_id).first()
+#         if not department or not level:
+#             raise HTTPException(status_code=400, detail="Invalid department or level")
+#         if department.department_id != admin.department_id:
+#             raise HTTPException(status_code=403, detail="Not authorized for this department")
 
-        # Handle photo (store as base64 for now)
-        photo_data = None
-        if photo:
-            photo_content = await photo.read()
-            photo_data = base64.b64encode(photo_content).decode('utf-8')
+#         # Handle photo (store as base64 for now)
+#         photo_data = None
+#         if photo:
+#             photo_content = await photo.read()
+#             photo_data = base64.b64encode(photo_content).decode('utf-8')
 
-        db_student = Student(
-            matriculation_number=matriculation_number,
-            name=name,
-            department_id=department_id,
-            level_id=level_id,
-            fingerprint_template=fingerprint_template,
-            photo=photo_data  # Store base64 string
-        )
-        db.add(db_student)
-        db.commit()
-        logging.debug(f"Student enrolled: {matriculation_number}")
-        return {"message": "Student enrolled successfully", "student_id": db_student.matriculation_number}
-    except Exception as e:
-        db.rollback()
-        logging.error(f"Enrollment error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+#         db_student = Student(
+#             matriculation_number=matriculation_number,
+#             name=name,
+#             department_id=department_id,
+#             level_id=level_id,
+#             fingerprint_template=fingerprint_template,
+#             photo=photo_data  # Store base64 string
+#         )
+#         db.add(db_student)
+#         db.commit()
+#         logging.debug(f"Student enrolled: {matriculation_number}")
+#         return {"message": "Student enrolled successfully", "student_id": db_student.matriculation_number}
+#     except Exception as e:
+#         db.rollback()
+#         logging.error(f"Enrollment error: {str(e)}")
+#         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/enrollment/status")
 async def enrollment_status(request: EnrollmentStatusRequest, db: Session = Depends(get_db)):
@@ -126,6 +127,106 @@ async def enrollment_status(request: EnrollmentStatusRequest, db: Session = Depe
     except Exception as e:
         logging.error(f"Status error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+
+
+
+
+
+
+# @app.post("/enrollment/enroll")
+# async def enroll_student(
+#     request: EnrollmentRequest,
+#     photo: UploadFile = File(None),
+#     admin=Depends(get_current_admin),
+#     db: Session = Depends(get_db)
+# ):
+#     try:
+#         department = db.query(Department).filter(Department.department_id == request.department_id).first()
+#         level = db.query(Level).filter(Level.level_id == request.level_id, Level.department_id == request.department_id).first()
+#         if not department or not level:
+#             raise HTTPException(status_code=400, detail="Invalid department or level")
+#         if department.department_id != admin.department_id:
+#             raise HTTPException(status_code=403, detail="Not authorized for this department")
+
+#         # Handle photo (store as base64 for now)
+#         photo_data = None
+#         if photo:
+#             photo_content = await photo.read()
+#             photo_data = base64.b64encode(photo_content).decode('utf-8')
+
+#         db_student = Student(
+#             matriculation_number=request.matriculation_number,
+#             name=request.name,
+#             department_id=request.department_id,
+#             level_id=request.level_id,
+#             fingerprint_template=request.fingerprint_template,
+#             photo=photo_data
+#         )
+#         db.add(db_student)
+#         db.commit()
+#         logging.debug(f"Student enrolled: {request.matriculation_number}")
+#         return {"message": "Student enrolled successfully", "student_id": db_student.matriculation_number}
+#     except Exception as e:
+#         db.rollback()
+#         logging.error(f"Enrollment error: {str(e)}")
+#         raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+
+
+@app.post("/enrollment/enroll")
+async def enroll_student(
+    matriculation_number: str = Form(...),
+    name: str = Form(...),
+    department_id: int = Form(...),
+    level_id: int = Form(...),
+    fingerprint_template: str = Form(...),
+    photo: UploadFile = File(None),
+    admin=Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    try:
+        logging.debug(f"Received form data: matric={matriculation_number}, name={name}, dept={department_id}, level={level_id}, fingerprint={fingerprint_template}")
+        
+        department = db.query(Department).filter(Department.department_id == department_id).first()
+        level = db.query(Level).filter(Level.level_id == level_id, Level.department_id == department_id).first()
+        if not department or not level:
+            raise HTTPException(status_code=400, detail="Invalid department or level")
+        if department.department_id != admin.department_id:
+            raise HTTPException(status_code=403, detail="Not authorized for this department")
+
+        # Handle photo (store as base64 for now)
+        photo_data = None
+        if photo:
+            photo_content = await photo.read()
+            photo_data = base64.b64encode(photo_content).decode('utf-8')
+
+        db_student = Student(
+            matriculation_number=matriculation_number,
+            name=name,
+            department_id=department_id,
+            level_id=level_id,
+            fingerprint_template=fingerprint_template,
+            photo=photo_data
+        )
+        db.add(db_student)
+        db.commit()
+        logging.debug(f"Student enrolled: {matriculation_number}")
+        return {"message": "Student enrolled successfully", "student_id": db_student.matriculation_number}
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Enrollment error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+
+
 
 @app.get("/enrollment/list/{department_id}/{level_id}")
 async def download_enrollment_list(department_id: int, level_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
@@ -167,6 +268,10 @@ async def upload_course_list(course_id: int, file: UploadFile = File(...), admin
         db.rollback()
         logging.error(f"Upload error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+
+
 
 @app.post("/session/")
 async def create_session(session: ExamSessionCreate, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
@@ -201,6 +306,91 @@ async def create_session(session: ExamSessionCreate, admin=Depends(get_current_a
         db.rollback()
         logging.error(f"Session error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+
+@app.get("/departments")
+async def get_departments(admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+    try:
+        depts = db.query(Department).filter(Department.department_id == admin.department_id).all()
+        return [{"department_id": d.department_id, "name": d.name} for d in depts]
+    except Exception as e:
+        logging.error(f"Departments fetch error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/levels")
+async def get_levels(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+    try:
+        if department_id != admin.department_id:
+            raise HTTPException(status_code=403, detail="Not authorized for this department")
+        levels = db.query(Level).filter(Level.department_id == department_id).all()
+        return [{"level_id": l.level_id, "name": l.name} for l in levels]
+    except Exception as e:
+        logging.error(f"Levels fetch error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/courses")
+async def get_courses(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+    try:
+        if department_id != admin.department_id:
+            raise HTTPException(status_code=403, detail="Not authorized for this department")
+        courses = db.query(Course).filter(Course.department_id == department_id).all()
+        return [{"course_id": c.course_id, "course_code": c.course_code, "course_name": c.course_name} for c in courses]
+    except Exception as e:
+        logging.error(f"Courses fetch error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @app.post("/session/")
+# async def create_session(session: ExamSessionCreate, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+#     try:
+#         # Validate course by code
+#         course = db.query(Course).filter(Course.course_code == session.course_code).first()
+#         if not course:
+#             raise HTTPException(status_code=404, detail="Course not found")
+#         if course.department_id != admin.department_id:
+#             raise HTTPException(status_code=403, detail="Not authorized for this department")
+
+#         # Check for overlapping sessions
+#         overlapping_session = db.query(ExamSession).filter(
+#             ExamSession.course_id == course.course_id,
+#             ExamSession.start_time <= session.end_time,
+#             ExamSession.end_time >= session.start_time
+#         ).first()
+#         if overlapping_session:
+#             raise HTTPException(status_code=400, detail="Session overlaps with existing session for this course")
+
+#         db_session = ExamSession(
+#             course_id=course.course_id,
+#             admin_id=admin.admin_id,
+#             start_time=session.start_time,
+#             end_time=session.end_time
+#         )
+#         db.add(db_session)
+#         db.commit()
+#         logging.debug(f"Session created: {db_session.session_id}")
+#         return {"message": "Session created successfully", "session_id": db_session.session_id}
+#     except Exception as e:
+#         db.rollback()
+#         logging.error(f"Session error: {str(e)}")
+#         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/attendance/authenticate")
 async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
@@ -279,7 +469,8 @@ async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_curre
                 "message": "Student already authenticated",
                 "matriculation_number": student.matriculation_number,
                 "name": student.name,
-                "ca_mark": course_list.ca_mark
+                "ca_mark": course_list.ca_mark,
+                "photo": student.photo,
             }
 
         # Record attendance
