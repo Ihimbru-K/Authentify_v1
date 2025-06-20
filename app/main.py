@@ -339,6 +339,27 @@ async def get_courses(department_id: int, admin=Depends(get_current_admin), db: 
     except Exception as e:
         logging.error(f"Courses fetch error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    
+@app.get("/sessions")
+async def get_sessions(admin_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    try:
+        # Fetch sessions where the admin is the creator
+        sessions = db.query(ExamSession).filter(ExamSession.admin_id == admin.admin_id).all()
+        if not sessions:
+            raise HTTPException(status_code=404, detail="No sessions found for this admin")
+
+        # Convert to response format
+        return [
+            {
+                "session_id": session.session_id,
+                "course_code": db.query(Course).filter(Course.course_id == session.course_id).first().course_code,
+                "start_time": session.start_time.isoformat(),
+                "end_time": session.end_time.isoformat()
+            }
+            for session in sessions
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error fetching sessions: {str(e)}")
 
 
 
