@@ -132,7 +132,7 @@ async def enroll_student(
     fingerprint_template: str = Form(...),
     photo: UploadFile = File(None),
     admin=Depends(get_current_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db) 
 ):
     try:
         logging.debug(f"Received form data: matric={matriculation_number}, name={name}, dept={department_id}, level={level_id}, fingerprint={fingerprint_template}")
