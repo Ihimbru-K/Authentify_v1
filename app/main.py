@@ -418,6 +418,55 @@ async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_curre
         db.rollback()
         logging.error(f"Authentication error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+
+@app.get("/sessions")
+async def get_sessions(admin_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):
+    try:
+        if admin_id != admin.admin_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view sessions for this admin")
+        wat_tz = pytz.timezone('Africa/Lagos')
+        now = datetime.now(wat_tz).replace(tzinfo=None)
+        # Delete expired sessions
+        db.query(ExamSession).filter(ExamSession.end_time < now).delete()
+        db.commit()
+        sessions = db.query(ExamSession).filter(
+            ExamSession.admin_id == admin.admin_id,
+            ExamSession.end_time >= now
+        ).all()
+        if not sessions:
+            return {"message": "No active sessions found for this admin"}
+        return [
+            {
+                "session_id": session.session_id,
+                "course_code": db.query(Course).filter(Course.course_id == session.course_id).first().course_code,
+                "start_time": session.start_time.isoformat(),
+                "end_time": session.end_time.isoformat()
+            }
+            for session in sessions
+        ]
+    except Exception as e:
+        logging.error(f"Error fetching sessions: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+# @app.delete("/sessions/{session_id}")
+# async def end_session(session_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+#     try:
+#         session = db.query(ExamSession).filter(ExamSession.session_id == session_id).first()
+#         if not session:
+#             raise HTTPException(status_code=404, detail="Session not found")
+#         if session.admin_id != admin.admin_id:
+#             raise HTTPException(status_code=403, detail="Not authorized to end this session")
+#         db.delete(session)
+#         db.commit()
+#         logging.debug(f"Session {session_id} ended and deleted by admin {admin.admin_id}")
+#         return {"message": "Session ended and deleted successfully"}
+#     except Exception as e:
+#         db.rollback()
+#         logging.error(f"Error ending session: {str(e)}")
+#         raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.post("/attendance/dispute")
 async def report_ca_mark_dispute(dispute: CAMarkDisputeRequest, db: Session = Depends(get_db)):
@@ -528,59 +577,7 @@ async def get_error_report(session_id: int, admin=Depends(get_current_admin), db
             io.BytesIO(stream.getvalue().encode('utf-8')),
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename=error_report_{session_id}.csv"}
-        )
+        ) 
     except Exception as e:
         logging.error(f"Error report error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
