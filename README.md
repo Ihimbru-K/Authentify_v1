@@ -1,6 +1,6 @@
-Got it — no drama, no fluff — here’s **literally everything** you gave me **in raw `.md` format**, zero assumptions, every line intact, just properly fenced. Copy–paste–done.
 
-````markdown
+
+
 # Authentikate UBa Biometric Exam Attendance System
 
 ## Overview
