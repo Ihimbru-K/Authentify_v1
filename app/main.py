@@ -84,6 +84,20 @@ async def signup(admin: AdminSignup, db: Session = Depends(get_db)):
 #         logging.error(f"Signup error: {str(e)}")
 #         raise HTTPException(status_code=400, detail=str(e))
 
+# @app.post("/auth/login")
+# async def login(admin: AdminLogin, db: Session = Depends(get_db)):
+#     db_admin = db.query(Admin).filter(Admin.username == admin.username).first()
+#     if not db_admin or not verify_password(admin.password, db_admin.password_hash):
+#         raise HTTPException(status_code=401, detail="Invalid credentials")
+#     token = create_access_token({"sub": admin.username})
+#     logging.debug(f"Admin logged in: {admin.username}")
+#     return {
+#         "access_token": token,
+#         "token_type": "bearer",
+#         "name": admin.username  
+#     }
+
+
 @app.post("/auth/login")
 async def login(admin: AdminLogin, db: Session = Depends(get_db)):
     db_admin = db.query(Admin).filter(Admin.username == admin.username).first()
@@ -94,8 +108,11 @@ async def login(admin: AdminLogin, db: Session = Depends(get_db)):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "name": admin.username  
+        "name": admin.username,
+        "department_id": db_admin.department_id  
     }
+
+
 
 
 @app.post("/enrollment/status")
@@ -275,27 +292,51 @@ async def get_departments(db: Session = Depends(get_db)):
         logging.error(f"Departments fetch error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.get("/levels")
-async def get_levels(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+async def get_levels(admin=Depends(get_current_admin), db: Session = Depends(get_db)):
     try:
-        if department_id != admin.department_id:
-            raise HTTPException(status_code=403, detail="Not authorized for this department")
-        levels = db.query(Level).filter(Level.department_id == department_id).all()
+        levels = db.query(Level).filter(Level.department_id == admin.department_id).all()
         return [{"level_id": l.level_id, "name": l.name} for l in levels]
     except Exception as e:
         logging.error(f"Levels fetch error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
+
+# @app.get("/levels")
+# async def get_levels(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+#     try:
+#         if department_id != admin.department_id:
+#             raise HTTPException(status_code=403, detail="Not authorized for this department")
+#         levels = db.query(Level).filter(Level.department_id == department_id).all()
+#         return [{"level_id": l.level_id, "name": l.name} for l in levels]
+#     except Exception as e:
+#         logging.error(f"Levels fetch error: {str(e)}")
+#         raise HTTPException(status_code=400, detail=str(e))
+
+# @app.get("/courses")
+# async def get_courses(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+#     try:
+#         if department_id != admin.department_id:
+#             raise HTTPException(status_code=403, detail="Not authorized for this department")
+#         courses = db.query(Course).filter(Course.department_id == department_id).all()
+#         return [{"course_id": c.course_id, "course_code": c.course_code, "course_name": c.course_name} for c in courses]
+#     except Exception as e:
+#         logging.error(f"Courses fetch error: {str(e)}")
+#         raise HTTPException(status_code=400, detail=str(e))
+
+
+
 @app.get("/courses")
-async def get_courses(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
+async def get_courses(admin=Depends(get_current_admin), db: Session = Depends(get_db)):
     try:
-        if department_id != admin.department_id:
-            raise HTTPException(status_code=403, detail="Not authorized for this department")
-        courses = db.query(Course).filter(Course.department_id == department_id).all()
+        courses = db.query(Course).filter(Course.department_id == admin.department_id).all()
         return [{"course_id": c.course_id, "course_code": c.course_code, "course_name": c.course_name} for c in courses]
     except Exception as e:
         logging.error(f"Courses fetch error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
     
 @app.get("/sessions")
 async def get_sessions(admin_id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)):

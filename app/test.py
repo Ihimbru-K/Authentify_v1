@@ -1,6 +1,8 @@
 from app.security import get_password_hash
 
-password = "come"  
+#from app.security import get_password_hash
+
+password = "mine"  
 new_hash = get_password_hash(password)
 print(new_hash)
 
