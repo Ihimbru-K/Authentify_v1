@@ -27,8 +27,69 @@ Base.metadata.create_all(bind=engine)
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
-@app.post("/auth/signup")
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+import logging
+
+router = APIRouter()
+
+@router.post("/auth/signup")
 async def signup(admin: AdminSignup, db: Session = Depends(get_db)):
+    try:
+        # Check for existing username
+        existing_admin = db.query(Admin).filter(Admin.username == admin.username).first()
+        if existing_admin:
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        # Handle department
+        department_id = admin.department_id
+        if department_id:
+            department = db.query(Department).filter(Department.department_id == department_id).first()
+            if not department:
+                new_department = Department(
+                    department_id=department_id,
+                    name=f"Dept_{department_id}",
+                    school_id=1
+                )
+                db.add(new_department)
+                db.flush()
+        else:
+            department_id = 1  # default department
+
+        # Create the admin
+        db_admin = Admin(
+            username=admin.username,
+            password_hash=get_password_hash(admin.password),
+            department_id=department_id
+        )
+        db.add(db_admin)
+        db.commit()
+        db.refresh(db_admin)
+
+        logging.debug(f"Admin registered: {admin.username}")
+
+        token = create_access_token({"sub": admin.username})
+
+        return {
+            "message": "Admin registered successfully",
+            "access_token": token,
+            "token_type": "bearer"
+        }
+
+    except HTTPException:
+        # let intentional errors pass through
+        raise
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Signup error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+
+
+# @app.post("/auth/signup")
+# async def signup(admin: AdminSignup, db: Session = Depends(get_db)):
     try:
         department = db.query(Department).filter(Department.department_id == admin.department_id).first()
         if not department:
