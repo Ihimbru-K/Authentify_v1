@@ -58,43 +58,6 @@ async def signup(admin: AdminSignup, db: Session = Depends(get_db)):
 
 
 
-# @app.post("/auth/signup")
-# async def signup(admin: AdminSignup, db: Session = Depends(get_db)):
-#     try:
-#         department = db.query(Department).filter(Department.department_id == admin.department_id).first()
-#         if not department:
-#             raise HTTPException(status_code=400, detail="Invalid department")
-#         existing_admin = db.query(Admin).filter(Admin.username == admin.username).first()
-#         if existing_admin:
-#             raise HTTPException(status_code=400, detail="Username already exists")
-#         db_admin = Admin(
-#             username=admin.username,
-#             password_hash=get_password_hash(admin.password),
-#             department_id=admin.department_id
-#         )
-#         db.add(db_admin)
-#         db.commit()
-#         logging.debug(f"Admin registered: {admin.username}")
-#         return {"message": "Admin registered successfully"}
-#     except Exception as e:
-#         db.rollback()
-#         logging.error(f"Signup error: {str(e)}")
-#         raise HTTPException(status_code=400, detail=str(e))
-
-# @app.post("/auth/login")
-# async def login(admin: AdminLogin, db: Session = Depends(get_db)):
-#     db_admin = db.query(Admin).filter(Admin.username == admin.username).first()
-#     if not db_admin or not verify_password(admin.password, db_admin.password_hash):
-#         raise HTTPException(status_code=401, detail="Invalid credentials")
-#     token = create_access_token({"sub": admin.username})
-#     logging.debug(f"Admin logged in: {admin.username}")
-#     return {
-#         "access_token": token,
-#         "token_type": "bearer",
-#         "name": admin.username  
-#     }
-
-
 @app.post("/auth/login")
 async def login(admin: AdminLogin, db: Session = Depends(get_db)):
     db_admin = db.query(Admin).filter(Admin.username == admin.username).first()
@@ -270,16 +233,6 @@ async def create_session(session: ExamSessionCreate, admin=Depends(get_current_a
     
 
 
-# @app.get("/departments")
-# async def get_departments(admin=Depends(get_current_admin), db: Session = Depends(get_db)):
-#     try:
-#         depts = db.query(Department).filter(Department.department_id == admin.department_id).all()
-#         return [{"department_id": d.department_id, "name": d.name} for d in depts]
-#     except Exception as e:
-#         logging.error(f"Departments fetch error: {str(e)}")
-#         raise HTTPException(status_code=400, detail=str(e))
-
-
 @app.get("/departments")
 async def get_departments(db: Session = Depends(get_db)):
     try:
@@ -298,30 +251,6 @@ async def get_levels(admin=Depends(get_current_admin), db: Session = Depends(get
     except Exception as e:
         logging.error(f"Levels fetch error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-
-
-# @app.get("/levels")
-# async def get_levels(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
-#     try:
-#         if department_id != admin.department_id:
-#             raise HTTPException(status_code=403, detail="Not authorized for this department")
-#         levels = db.query(Level).filter(Level.department_id == department_id).all()
-#         return [{"level_id": l.level_id, "name": l.name} for l in levels]
-#     except Exception as e:
-#         logging.error(f"Levels fetch error: {str(e)}")
-#         raise HTTPException(status_code=400, detail=str(e))
-
-# @app.get("/courses")
-# async def get_courses(department_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
-#     try:
-#         if department_id != admin.department_id:
-#             raise HTTPException(status_code=403, detail="Not authorized for this department")
-#         courses = db.query(Course).filter(Course.department_id == department_id).all()
-#         return [{"course_id": c.course_id, "course_code": c.course_code, "course_name": c.course_name} for c in courses]
-#     except Exception as e:
-#         logging.error(f"Courses fetch error: {str(e)}")
-#         raise HTTPException(status_code=400, detail=str(e))
-
 
 
 @app.get("/courses")
@@ -356,109 +285,6 @@ async def get_sessions(admin_id: int, db: Session = Depends(get_db), admin=Depen
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error fetching sessions: {str(e)}")
 
-
-
-# @app.post("/attendance/authenticate")
-# async def authenticate_student(auth: StudentAuthRequest, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
-#     try:
-#         # Validate session
-#         session = db.query(ExamSession).filter(ExamSession.session_id == auth.session_id).first()
-#         if not session:
-#             raise HTTPException(status_code=404, detail="Session not found")
-#         if session.admin_id != admin.admin_id:
-#             raise HTTPException(status_code=403, detail="Not authorized for this session")
-
-#         # Check time window in WAT
-#         wat_tz = pytz.timezone('Africa/Lagos')  # WAT (UTC+1)
-#         now = datetime.now(wat_tz).replace(tzinfo=None)  # Make naive
-#         logging.debug(f"Current WAT time: {now}, Session start: {session.start_time}, end: {session.end_time}")
-
-#         # start_time and end_time are naive (from TIMESTAMP WITHOUT TIME ZONE)
-#         start_time = session.start_time
-#         end_time = session.end_time
-
-#         if now < start_time or now > end_time:
-#             raise HTTPException(status_code=403, detail="Authentication outside session time window")
-
-#         # Match fingerprint
-#         student = db.query(Student).filter(Student.fingerprint_template == auth.fingerprint_template).first()
-#         if not student:
-#             error_log = ErrorLog(
-#                 session_id=auth.session_id,
-#                 matriculation_number=None,
-#                 error_type="AUTH_FAILED",
-#                 details="No student matched the provided fingerprint"
-#             )
-#             db.add(error_log)
-#             db.commit()
-#             logging.error(f"Fingerprint mismatch for session {auth.session_id}")
-#             raise HTTPException(status_code=404, detail="Student not found")
-
-#         # Check course enrollment
-#         course_list = db.query(CourseList).filter(
-#             CourseList.course_id == session.course_id,
-#             CourseList.matriculation_number == student.matriculation_number
-#         ).first()
-#         if not course_list:
-#             error_log = ErrorLog(
-#                 session_id=auth.session_id,
-#                 matriculation_number=student.matriculation_number,
-#                 error_type="NOT_ENROLLED",
-#                 details=f"Student not enrolled in course {session.course_id}"
-#             )
-#             db.add(error_log)
-#             db.commit()
-#             logging.error(f"Student {student.matriculation_number} not enrolled in course {session.course_id}")
-#             raise HTTPException(status_code=403, detail="Student not enrolled in this course")
-
-#         # Validate CA mark
-#         if course_list.ca_mark is None or course_list.ca_mark < 0:
-#             error_log = ErrorLog(
-#                 session_id=auth.session_id,
-#                 matriculation_number=student.matriculation_number,
-#                 error_type="INVALID_CA_MARK",
-#                 details=f"Invalid CA mark: {course_list.ca_mark}"
-#             )
-#             db.add(error_log)
-#             db.commit()
-#             logging.error(f"Invalid CA mark for {student.matriculation_number}: {course_list.ca_mark}")
-#             raise HTTPException(status_code=403, detail="Invalid CA mark")
-
-#         # Check if already authenticated
-#         existing_attendance = db.query(Attendance).filter(
-#             Attendance.session_id == auth.session_id,
-#             Attendance.matriculation_number == student.matriculation_number
-#         ).first()
-#         if existing_attendance and existing_attendance.authenticated:
-#             logging.debug(f"Student {student.matriculation_number} already authenticated for session {auth.session_id}")
-#             return {
-#                 #"course_name": course.course_name,
-#                 "message": "Student already authenticated",
-#                 "matriculation_number": student.matriculation_number,
-#                 "name": student.name,
-#                 "ca_mark": course_list.ca_mark,
-#                 "photo": student.photo,
-#             }
-
-#         # Record attendance
-#         attendance = Attendance(
-#             session_id=auth.session_id,
-#             matriculation_number=student.matriculation_number,
-#             authenticated=True
-#         )
-#         db.add(attendance)
-#         db.commit()
-#         logging.debug(f"Student {student.matriculation_number} authenticated for session {auth.session_id}")
-#         return {
-#             "message": "Student authenticated successfully",
-#             "matriculation_number": student.matriculation_number,
-#             "name": student.name,
-#             "ca_mark": course_list.ca_mark
-#         }
-#     except Exception as e:
-#         db.rollback()
-#         logging.error(f"Authentication error: {str(e)}")
-#         raise HTTPException(status_code=400, detail=str(e))
 
 
 
@@ -600,23 +426,6 @@ async def get_sessions(admin_id: int, db: Session = Depends(get_db), admin=Depen
     except Exception as e:
         logging.error(f"Error fetching sessions: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-
-# @app.delete("/sessions/{session_id}")
-# async def end_session(session_id: int, admin=Depends(get_current_admin), db: Session = Depends(get_db)):
-#     try:
-#         session = db.query(ExamSession).filter(ExamSession.session_id == session_id).first()
-#         if not session:
-#             raise HTTPException(status_code=404, detail="Session not found")
-#         if session.admin_id != admin.admin_id:
-#             raise HTTPException(status_code=403, detail="Not authorized to end this session")
-#         db.delete(session)
-#         db.commit()
-#         logging.debug(f"Session {session_id} ended and deleted by admin {admin.admin_id}")
-#         return {"message": "Session ended and deleted successfully"}
-#     except Exception as e:
-#         db.rollback()
-#         logging.error(f"Error ending session: {str(e)}")
-#         raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/attendance/dispute")
